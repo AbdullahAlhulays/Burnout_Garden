@@ -86,12 +86,12 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-5.2",
+        model: "gpt-5.4-nano",
         input: [
           {
             role: "system",
             content:
-              "Burnout assistant. Give exactly 3 recommendations. Max 10 words each. Very concise. Return JSON only.",
+              "Burnout assistant. Return JSON only. 3 recommendations. Max 10 words each",
           },
           {
             role: "user",
