@@ -1,13 +1,9 @@
-//
-// Simple animated progress bar.
-// Used inside CategoryCard and the watering overlay.
-
-function ProgressBar({ value, color, height = "h-1.5", animate = true }) {
+function ProgressBar({ value, color = "#4f8f52" }) {
   return (
-    <div className={`${height} bg-green-100 rounded-full overflow-hidden`}>
+    <div className="progress-track">
       <div
-        className={`h-full rounded-full ${animate ? "transition-all duration-1000" : ""}`}
-        style={{ width: `${value}%`, background: color }}
+        className="progress-fill"
+        style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }}
       />
     </div>
   );

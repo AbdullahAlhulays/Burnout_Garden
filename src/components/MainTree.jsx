@@ -1,41 +1,91 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { getBranchTipPosition, drawTree } from "../utils/treeDrawing";
 import { scoresToArray } from "../data/scoring";
-import { drawTree } from "../utils/treeDrawing";
+import { QUESTION_INDEX } from "../data/questions";
+import GardenRewardsLayer from "./GardenRewardsLayer";
 
-//
-// Reusable animated tree canvas.
-// Pass scores + dimensions, it handles the animation loop.
-
-function MainTree({ scores, width, height, groundY, wateredCatIndex = -1, waterBoost = 0 }) {
+function MainTree({
+  scores,
+  ribbonBranchId = null,
+  breatheMode = false,
+  className = "",
+  totalPoints = null,
+  gardenSettings = null,
+  onUpdateGardenSettings = null,
+  showRewards = false,
+}) {
   const canvasRef = useRef(null);
-  const rafRef    = useRef(null);
-  const tickRef   = useRef(0);
-
-  const scoreArray = scoresToArray(scores);
+  const scoreArray = useMemo(() => scoresToArray(scores ?? {}), [scores]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return undefined;
 
-    function loop() {
-      tickRef.current += 16;
-      ctx.clearRect(0, 0, width, height);
-      drawTree(ctx, width / 2, groundY, width, scoreArray, tickRef.current, wateredCatIndex, waterBoost);
-      rafRef.current = requestAnimationFrame(loop);
-    }
+    let frameId = 0;
+    let running = true;
 
-    rafRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [JSON.stringify(scoreArray), wateredCatIndex, waterBoost]);
+    const render = (time) => {
+      if (!running) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      context.clearRect(0, 0, width, height);
+
+      const sway = breatheMode ? Math.sin(time / 1300) * 8 : Math.sin(time / 1700) * 3;
+      const boost = breatheMode ? (Math.sin(time / 1000) + 1) / 2 : 0;
+
+      context.save();
+      context.translate(sway, 0);
+      drawTree(context, width / 2, height - 8, width - 12, scoreArray, time, -1, boost);
+      context.restore();
+
+      frameId = window.requestAnimationFrame(render);
+    };
+
+    frameId = window.requestAnimationFrame(render);
+
+    return () => {
+      running = false;
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [scoreArray, breatheMode]);
+
+  const ribbonStyle = useMemo(() => {
+    if (!ribbonBranchId) return null;
+
+    const index = QUESTION_INDEX[ribbonBranchId];
+    if (typeof index !== "number") return null;
+
+    const tip = getBranchTipPosition(index, scoreArray, 480, 360);
+
+    return {
+      left: `${(tip.x / 480) * 100}%`,
+      top: `${(tip.y / 360) * 100}%`,
+    };
+  }, [ribbonBranchId, scoreArray]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      style={{ display: "block" }}
-    />
+    <div className={`tree-stage ${className} ${breatheMode ? "tree-stage-breathe" : ""}`}>
+      {showRewards ? (
+        <GardenRewardsLayer
+          totalPoints={totalPoints ?? 0}
+          settings={gardenSettings}
+          onUpdateSettings={onUpdateGardenSettings}
+        />
+      ) : null}
+      <canvas ref={canvasRef} className="tree-canvas" />
+      {ribbonStyle ? (
+        <div className="branch-ribbon" style={ribbonStyle}>
+          <span />
+        </div>
+      ) : null}
+    </div>
   );
 }
 

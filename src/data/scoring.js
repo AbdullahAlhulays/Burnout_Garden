@@ -1,63 +1,186 @@
 import { QUESTIONS } from "./questions";
 
-//
-// Converts raw slider values into 0–100 health scores.
-// Each function reflects real wellness logic.
+const MAX_ANSWER_SCORE = 5;
+const MAX_TOTAL_SCORE = QUESTIONS.length * MAX_ANSWER_SCORE;
 
-const scoringRules = {
-  sleep:    v => v >= 7 && v <= 9 ? 100 : v >= 6 ? 80 : v >= 5 ? 52 : Math.max(0, v * 12),
-  work:     v => v <= 6 ? 100 : v <= 8 ? 85 : v <= 10 ? 62 : v <= 12 ? 38 : Math.max(0, 100 - v * 6),
-  family:   v => Math.min(100, v * 42),
-  friends:  v => Math.min(100, v * 46),
-  exercise: v => v >= 60 ? 100 : v >= 30 ? 85 : v >= 15 ? 62 : Math.min(55, v * 2),
-  hobbies:  v => Math.min(100, v * 32),
-  islamic:  v => Math.min(100, 20 + v * 42),
-  water:    v => v >= 2 && v <= 3 ? 100 : v >= 1.5 ? 82 : v >= 1 ? 60 : Math.min(48, v * 36),
-  food:     v => Math.round((v / 10) * 100),
-  screen:   v => v <= 2 ? 100 : v <= 4 ? 75 : v <= 6 ? 48 : Math.max(0, 100 - v * 7),
-  stress:   v => Math.round(((10 - v) / 9) * 100),
+const CATEGORY_GROUPS = {
+  exhaustion: {
+    label: "Exhaustion",
+    questionIds: [
+      "emotionallyDrained",
+      "physicallyExhausted",
+      "wakeUpTired",
+      "overwhelmed",
+      "runDown",
+      "noEnergyForSelf",
+    ],
+    maxScore: 30,
+  },
+  detachment: {
+    label: "Detachment",
+    questionIds: [
+      "cantKeepUp",
+      "disconnected",
+      "frustrated",
+      "meaningless",
+    ],
+    maxScore: 20,
+  },
+  reducedEffectiveness: {
+    label: "Reduced Effectiveness",
+    questionIds: [
+      "lowMotivation",
+      "lessEffective",
+    ],
+    maxScore: 10,
+  },
 };
+
+function getQuestionBurnoutScore(answerValue) {
+  const raw = Number(answerValue ?? 0);
+  return Math.round((raw / MAX_ANSWER_SCORE) * 100);
+}
 
 function computeScores(answers) {
   const scores = {};
-  QUESTIONS.forEach(q => {
-    const raw = answers[q.id] ?? q.min;
-    scores[q.id] = Math.round(scoringRules[q.id](raw));
+
+  QUESTIONS.forEach((question) => {
+    scores[question.id] = getQuestionBurnoutScore(answers[question.id]);
   });
+
   return scores;
+}
+
+function computeTreeScores(scores) {
+  const treeScores = {};
+
+  Object.entries(scores).forEach(([key, value]) => {
+    treeScores[key] = 100 - value;
+  });
+
+  return treeScores;
+}
+
+function calculateCategoryPercentage(answers, group) {
+  const categoryScore = group.questionIds.reduce(
+    (sum, id) => sum + Number(answers[id] ?? 0),
+    0
+  );
+
+  return {
+    score: categoryScore,
+    percentage: Math.round((categoryScore / group.maxScore) * 100),
+  };
+}
+
+function calculateBurnoutResult(answers) {
+  const totalScore = QUESTIONS.reduce(
+    (sum, question) => sum + Number(answers[question.id] ?? 0),
+    0
+  );
+
+  const burnoutRate = Math.round((totalScore / MAX_TOTAL_SCORE) * 100);
+
+  const exhaustion = calculateCategoryPercentage(
+    answers,
+    CATEGORY_GROUPS.exhaustion
+  );
+  const detachment = calculateCategoryPercentage(
+    answers,
+    CATEGORY_GROUPS.detachment
+  );
+  const reducedEffectiveness = calculateCategoryPercentage(
+    answers,
+    CATEGORY_GROUPS.reducedEffectiveness
+  );
+
+  const categories = {
+    exhaustion: {
+      label: CATEGORY_GROUPS.exhaustion.label,
+      score: exhaustion.score,
+      percentage: exhaustion.percentage,
+    },
+    detachment: {
+      label: CATEGORY_GROUPS.detachment.label,
+      score: detachment.score,
+      percentage: detachment.percentage,
+    },
+    reducedEffectiveness: {
+      label: CATEGORY_GROUPS.reducedEffectiveness.label,
+      score: reducedEffectiveness.score,
+      percentage: reducedEffectiveness.percentage,
+    },
+  };
+
+  const weakestCategoryKey = Object.keys(categories).reduce((highest, key) => {
+    if (!highest) return key;
+    return categories[key].percentage > categories[highest].percentage
+      ? key
+      : highest;
+  }, null);
+
+  return {
+    totalScore,
+    maxTotalScore: MAX_TOTAL_SCORE,
+    burnoutRate,
+    burnoutLevel: getBurnoutLevel(burnoutRate),
+    categories,
+    weakestCategory: {
+      key: weakestCategoryKey,
+      label: categories[weakestCategoryKey].label,
+      percentage: categories[weakestCategoryKey].percentage,
+    },
+  };
 }
 
 function getOverallScore(scores) {
   const values = Object.values(scores);
-  return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
+  if (!values.length) return 0;
+
+  return Math.round(
+    values.reduce((sum, value) => sum + value, 0) / values.length
+  );
+}
+
+function getBurnoutLevel(score) {
+  if (score <= 20) return { text: "Very Low", color: "#2f8f56" };
+  if (score <= 40) return { text: "Mild", color: "#6aa84f" };
+  if (score <= 60) return { text: "Moderate", color: "#d48a10" };
+  if (score <= 80) return { text: "High", color: "#d35400" };
+  return { text: "Severe", color: "#c0392b" };
 }
 
 function getHealthLabel(score) {
-  if (score >= 80) return { text: "Blooming 🌸", color: "#2a8048" };
-  if (score >= 60) return { text: "Growing 🌿",  color: "#4a9e38" };
-  if (score >= 40) return { text: "Fading 🍂",   color: "#c8810a" };
-  return               { text: "Burnout Risk 🥀", color: "#c0392b" };
+  return getBurnoutLevel(score);
 }
 
 function getBarColor(score) {
-  if (score >= 70) return "#2d8a4e";
-  if (score >= 50) return "#7ab840";
-  if (score >= 35) return "#d48a10";
+  if (score <= 20) return "#2f8f56";
+  if (score <= 40) return "#7ab840";
+  if (score <= 60) return "#d48a10";
+  if (score <= 80) return "#d35400";
   return "#c0392b";
 }
 
 function getLeafColor(score) {
-  const s = score / 100;
-  if (s >= 0.75) return `hsl(${116 + s * 14}, ${50 + s * 30}%, ${26 + s * 20}%)`;
-  if (s >= 0.50) return `hsl(${88  + s * 32}, ${40 + s * 22}%, ${30 + s * 16}%)`;
-  if (s >= 0.30) return `hsl(${44  + s * 44}, ${42 + s * 14}%, ${33 + s * 12}%)`;
-  return               `hsl(${18  + s * 28}, ${36 + s * 14}%, ${30 + s * 10}%)`;
+  const clamped = Math.max(0, Math.min(100, score));
+  const hue = 120 - clamped * 1.2;
+  return `hsl(${hue}, 55%, 38%)`;
 }
 
-// Converts a scores object { id: score } to a plain array
-// in the same order as QUESTIONS — needed by the canvas tree.
 function scoresToArray(scores) {
-  return QUESTIONS.map(q => scores[q.id] ?? 0);
+  return QUESTIONS.map((question) => scores[question.id] ?? 0);
 }
 
-export { computeScores, getOverallScore, getHealthLabel, getBarColor, getLeafColor, scoresToArray };
+export {
+  CATEGORY_GROUPS,
+  calculateBurnoutResult,
+  computeScores,
+  computeTreeScores,
+  getOverallScore,
+  getBurnoutLevel,
+  getHealthLabel,
+  getBarColor,
+  getLeafColor,
+  scoresToArray,
+};

@@ -14,20 +14,22 @@
 //
 
 const BRANCH_LAYOUT = [
-  { angle: -2.35, attach: 0.22, curve: -24, baseLen: 54 },
-  { angle: -2.18, attach: 0.30, curve: -22, baseLen: 62 },
-  { angle: -2.00, attach: 0.38, curve: -18, baseLen: 72 },
-  { angle: -1.84, attach: 0.46, curve: -14, baseLen: 82 },
-  { angle: -1.68, attach: 0.56, curve: -10, baseLen: 92 },
-  { angle: -1.57, attach: 0.66, curve: 0,   baseLen: 98 },
-  { angle: -1.46, attach: 0.56, curve: 10,  baseLen: 92 },
-  { angle: -1.30, attach: 0.46, curve: 14,  baseLen: 82 },
-  { angle: -1.14, attach: 0.38, curve: 18,  baseLen: 72 },
-  { angle: -0.96, attach: 0.30, curve: 22,  baseLen: 62 },
-  { angle: -0.79, attach: 0.22, curve: 24,  baseLen: 54 },
+  { angle: -2.38, attach: 0.20, curve: -26, baseLen: 52 },
+  { angle: -2.24, attach: 0.27, curve: -24, baseLen: 58 },
+  { angle: -2.08, attach: 0.34, curve: -20, baseLen: 66 },
+  { angle: -1.92, attach: 0.42, curve: -16, baseLen: 76 },
+  { angle: -1.76, attach: 0.52, curve: -11, baseLen: 88 },
+  { angle: -1.62, attach: 0.64, curve: -3, baseLen: 96 },
+  { angle: -1.52, attach: 0.64, curve: 3, baseLen: 96 },
+  { angle: -1.38, attach: 0.52, curve: 11, baseLen: 88 },
+  { angle: -1.22, attach: 0.42, curve: 16, baseLen: 76 },
+  { angle: -1.06, attach: 0.34, curve: 20, baseLen: 66 },
+  { angle: -0.90, attach: 0.27, curve: 24, baseLen: 58 },
+  { angle: -0.76, attach: 0.20, curve: 26, baseLen: 52 },
 ];
 
-const DEFAULT_BRANCH_COUNT = 11;
+
+const DEFAULT_BRANCH_COUNT = 12;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));

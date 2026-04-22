@@ -1,18 +1,25 @@
 import HeroSection from "../components/HeroSection";
 import HowItWorks from "../components/HowItWorks";
 
-
-function HomePage({ onNavigate }) {
+function HomePage({
+  onNavigate,
+  weatherMood,
+  totalPoints,
+  gardenSettings,
+  onUpdateGardenSettings,
+}) {
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: "linear-gradient(170deg, #e4f3eb 0%, #faf8f3 55%, #f5eedf 100%)" }}
-    >
-      <HeroSection
-        onStartCheckin={() => onNavigate("checkin")}
-        onViewGarden={() => onNavigate("dashboard")}
-      />
-      <HowItWorks />
+    <div className={`page-shell weather-${weatherMood}`}>
+      <div className="page-content">
+        <HeroSection
+          onStartCheckin={() => onNavigate("checkin")}
+          onViewGarden={() => onNavigate("dashboard")}
+          totalPoints={totalPoints}
+          gardenSettings={gardenSettings}
+          onUpdateGardenSettings={onUpdateGardenSettings}
+        />
+        <HowItWorks />
+      </div>
     </div>
   );
 }
