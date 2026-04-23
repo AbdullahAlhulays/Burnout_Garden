@@ -45,6 +45,23 @@ function normalizeRecommendations(value) {
   return cleaned.length === 3 ? cleaned : FALLBACK_RECOMMENDATIONS;
 }
 
+function parseJsonText(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  const cleaned = value
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+}
+
 async function readJsonBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
 
@@ -75,58 +92,61 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "Missing OpenAI API key" });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Missing Gemini API key" });
     }
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+      {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "x-goog-api-key": process.env.GEMINI_API_KEY,
       },
       body: JSON.stringify({
-        model: "gpt-5.4-nano",
-        input: [
-          {
-            role: "system",
-            content:
-              "Burnout assistant. Return JSON only. 3 recommendations. Max 10 words each",
-          },
+        system_instruction: {
+          parts: [
+            {
+              text: "Burnout assistant. Return JSON only. 3 recommendations. Max 10 words each",
+            },
+          ],
+        },
+        contents: [
           {
             role: "user",
-            content: filteredItems.join(", "),
+            parts: [
+              {
+                text: filteredItems.join(", "),
+              },
+            ],
           },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "burnout_recommendations",
-            strict: true,
-            schema: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                recommendations: {
-                  type: "array",
-                  minItems: 3,
-                  maxItems: 3,
-                  items: {
-                    type: "string",
-                  },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseJsonSchema: {
+            type: "object",
+            properties: {
+              recommendations: {
+                type: "array",
+                minItems: 3,
+                maxItems: 3,
+                items: {
+                  type: "string",
                 },
               },
-              required: ["recommendations"],
             },
+            required: ["recommendations"],
           },
         },
       }),
-    });
+    }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
       return res.status(502).json({
-        error: "OpenAI request failed",
+        error: "Gemini request failed",
         details: errorText,
         recommendations: FALLBACK_RECOMMENDATIONS,
       });
@@ -136,29 +156,19 @@ export default async function handler(req, res) {
 
     let parsed = null;
 
-    if (typeof result.output_text === "string" && result.output_text.trim()) {
-      try {
-        parsed = JSON.parse(result.output_text);
-      } catch {}
-    }
+    const candidates = Array.isArray(result?.candidates) ? result.candidates : [];
 
-    if (!parsed && Array.isArray(result.output)) {
-      for (const outputItem of result.output) {
-        const contentItems = Array.isArray(outputItem?.content)
-          ? outputItem.content
-          : [];
+    for (const candidate of candidates) {
+      const parts = Array.isArray(candidate?.content?.parts)
+        ? candidate.content.parts
+        : [];
 
-        for (const contentItem of contentItems) {
-          if (typeof contentItem?.text === "string" && contentItem.text.trim()) {
-            try {
-              parsed = JSON.parse(contentItem.text);
-              break;
-            } catch {}
-          }
-        }
-
+      for (const part of parts) {
+        parsed = parseJsonText(part?.text);
         if (parsed) break;
       }
+
+      if (parsed) break;
     }
 
     return res.status(200).json({
