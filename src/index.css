@@ -440,8 +440,7 @@ button {
 }
 
 .wordle-mode-actions button,
-.wordle-input-row button,
-.wordle-reset-button {
+.wordle-input-row button {
   border: 0;
   border-radius: 999px;
   background: #2f7c44;
@@ -450,11 +449,6 @@ button {
 }
 
 .wordle-mode-actions button {
-  padding: 12px 18px;
-}
-
-.wordle-reset-button {
-  margin-top: 14px;
   padding: 12px 18px;
 }
 
@@ -595,8 +589,7 @@ button {
 
 .wordle-key:not(:disabled):hover,
 .wordle-mode-actions button:hover,
-.wordle-input-row button:not(:disabled):hover,
-.wordle-reset-button:hover {
+.wordle-input-row button:not(:disabled):hover {
   filter: brightness(0.96);
 }
 

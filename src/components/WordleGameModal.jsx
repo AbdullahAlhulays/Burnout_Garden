@@ -6,7 +6,6 @@ import {
   getGardenProgress,
   getCurrentWordleGame,
   getToday,
-  resetTodayWordleGame,
   startWordleGame,
   updateWordleGame,
 } from "../utils/localStorage";
@@ -165,11 +164,10 @@ function WordleGameModal({ open, onClose, onProgressChange }) {
   const [currentGuess, setCurrentGuess] = useState("");
   const [notice, setNotice] = useState("");
   const [showHelp, setShowHelp] = useState(false);
-  const [progressVersion, setProgressVersion] = useState(0);
   const inputRef = useRef(null);
 
   // Re-read progress whenever the modal opens or the game state changes.
-  const progress = useMemo(() => getGardenProgress(), [open, gameState, progressVersion]);
+  const progress = useMemo(() => getGardenProgress(), [open, gameState]);
   const todayGame = progress.currentGame;
   const todayResult = progress.todayResult;
   const totalPoints = progress.totalPoints;
@@ -222,19 +220,6 @@ function WordleGameModal({ open, onClose, onProgressChange }) {
     setGameState(nextGame);
     setCurrentGuess("");
     setNotice("");
-    onProgressChange?.();
-  }
-
-  function handleResetToday() {
-    const removedResult = resetTodayWordleGame();
-    setGameState(null);
-    setCurrentGuess("");
-    setNotice(
-      removedResult
-        ? "Today's puzzle was reset for your presentation."
-        : "Any in-progress puzzle was reset."
-    );
-    setProgressVersion((version) => version + 1);
     onProgressChange?.();
   }
 
@@ -527,13 +512,6 @@ function WordleGameModal({ open, onClose, onProgressChange }) {
             <h3>You already played today.</h3>
             <p>Come back tomorrow for a fresh word and another chance to earn points.</p>
             <p>Next play available: {getNextWordleAvailableLabel()}</p>
-            <button
-              type="button"
-              className="wordle-reset-button"
-              onClick={handleResetToday}
-            >
-              Reset today&apos;s puzzle
-            </button>
           </div>
         ) : null}
       </div>

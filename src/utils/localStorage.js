@@ -3,6 +3,7 @@ import { getGardenTier } from "../data/gardenTiers";
 
 const STORAGE_KEY = "burnout_garden_storage_v2";
 const LEGACY_KEY = "burnout_garden_entries";
+const PRESENTATION_RESET_KEY = "burnout_garden_presentation_reset_2026_04_28";
 
 const DEFAULT_GARDEN_SETTINGS = {
   environmentVariant: "meadow",
@@ -88,13 +89,32 @@ function normalizeStore(raw) {
   };
 }
 
+function applyPresentationReset(store) {
+  if (localStorage.getItem(PRESENTATION_RESET_KEY) === "done") return store;
+
+  const resetStore = {
+    ...store,
+    wordle: {
+      ...store.wordle,
+      totalPoints: 0,
+      currentGame: null,
+      history: [],
+    },
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(resetStore));
+  localStorage.setItem(PRESENTATION_RESET_KEY, "done");
+
+  return resetStore;
+}
+
 function readStore() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (parsed) return normalizeStore(parsed);
+    if (parsed) return applyPresentationReset(normalizeStore(parsed));
 
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "[]");
-    const migrated = normalizeStore(legacy);
+    const migrated = applyPresentationReset(normalizeStore(legacy));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
   } catch {
@@ -296,25 +316,6 @@ function finishWordleGame(result) {
   return result;
 }
 
-function resetTodayWordleGame() {
-  const store = readStore();
-  const today = getToday();
-  const todayResult = store.wordle.history.find((entry) => entry.date === today);
-  const pointsToRemove = Number(todayResult?.pointsEarned ?? 0) || 0;
-
-  writeStore({
-    ...store,
-    wordle: {
-      ...store.wordle,
-      totalPoints: Math.max(0, store.wordle.totalPoints - pointsToRemove),
-      currentGame: null,
-      history: store.wordle.history.filter((entry) => entry.date !== today),
-    },
-  });
-
-  return todayResult;
-}
-
 function updateGardenSettings(patch) {
   const store = readStore();
 
@@ -374,6 +375,5 @@ export {
   startWordleGame,
   updateWordleGame,
   finishWordleGame,
-  resetTodayWordleGame,
   updateGardenSettings,
 };
