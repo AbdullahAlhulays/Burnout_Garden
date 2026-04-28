@@ -296,6 +296,25 @@ function finishWordleGame(result) {
   return result;
 }
 
+function resetTodayWordleGame() {
+  const store = readStore();
+  const today = getToday();
+  const todayResult = store.wordle.history.find((entry) => entry.date === today);
+  const pointsToRemove = Number(todayResult?.pointsEarned ?? 0) || 0;
+
+  writeStore({
+    ...store,
+    wordle: {
+      ...store.wordle,
+      totalPoints: Math.max(0, store.wordle.totalPoints - pointsToRemove),
+      currentGame: null,
+      history: store.wordle.history.filter((entry) => entry.date !== today),
+    },
+  });
+
+  return todayResult;
+}
+
 function updateGardenSettings(patch) {
   const store = readStore();
 
@@ -355,5 +374,6 @@ export {
   startWordleGame,
   updateWordleGame,
   finishWordleGame,
+  resetTodayWordleGame,
   updateGardenSettings,
 };
